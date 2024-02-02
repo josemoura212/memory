@@ -1,4 +1,5 @@
-fn main() {
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen::prelude::wasm_bindgen(start))]
+pub fn main() {
     use rand::seq::SliceRandom;
     use slint::ComponentHandle;
     use slint::Model;
@@ -54,23 +55,29 @@ fn main() {
 
 slint::slint! {
 
-    struct TileData {
-        image: image,
-        image_visible: bool,
-        solved: bool,
+  import { VerticalBox } from "std-widgets.slint";
+
+  struct TileData {
+      image: image,
+      image_visible: bool,
+      solved: bool,
     }
 
-  component MemoryTile inherits Rectangle {
+   component MemoryTile inherits Rectangle {
     callback clicked;
     in property <bool> open_curtain;
     in property <bool> solved;
     in property <image> icon;
+    in property <color> background_color;
+    in property <bool> background_color_curtain;
+    in-out property <color> is_hover;
 
 
-      border-radius: 8px;
+       background_color: solved ? green :red ;
+
       width: 64px;
       height: 64px;
-      background: solved ? #34ce57: #3960D5;
+      background: background_color;
       animate background {
            duration: 800ms;
       }
@@ -82,7 +89,7 @@ slint::slint! {
       }
 
       Rectangle {
-        background: #193076;
+        background: is_hover;
         x: 0px;
         width: open_curtain? 0px : (parent.width / 2);
         height: parent.height;
@@ -90,7 +97,7 @@ slint::slint! {
       }
 
       Rectangle {
-        background: #193076;
+        background: is_hover;
         x: open_curtain ? parent.width : (parent.width / 2);
         width: open_curtain? 0px : (parent.width / 2);
         height: parent.height;
@@ -98,23 +105,31 @@ slint::slint! {
         animate x {duration: 200ms;easing: ease-in; }
       }
 
-      TouchArea {
+      ta := TouchArea {
         clicked => {
             //delegate to the user of this element
             root.clicked();
         }
       }
+
+      states [
+          active_hover when ta.has-hover:{
+            root.is_hover: #fdf900 ;
+          }
+      ]
   }
 
   export component MainWindow inherits Window {
-      width: 326px;
-      height: 326px;
+      // width: 326px;
+      // height: 326px;
+      preferred-height: 100%;
+      preferred-width: 100%;
       title: "Memory Game by José Augusto";
+      icon: @image-url("icons/Cat_kayden_pfp.jpg");
 
 
       callback check_if_pair_solved();
       in property <bool> disable_tiles;
-
 
 
     in-out property <[TileData]> memory_tiles:[
@@ -128,21 +143,32 @@ slint::slint! {
         {image: @image-url("icons/video.png")},
     ];
 
-    for title[i] in memory_tiles: MemoryTile{
-        x: mod(i, 4) * 74px;
-        y: floor(i / 4) * 74px;
-        width: 64px;
-        height: 64px;
-        icon: title.image;
-        open_curtain: title.image_visible || title.solved;
-        solved: title.solved;
-        clicked => {
-           if (!root.disable_tiles){
-            title.image_visible = !title.image-visible;
-            root.check_if_pair_solved();
-           }
+    VerticalBox {
+      alignment: center;
+      preferred-height: 100%;
+      preferred-width: 100%;
+      Rectangle {
+        height: 370px;
+        width: 370px;
+        padding: 50px;
+        border-color: transparent;
+        for title[i] in memory_tiles: MemoryTile{
+          is_hover: #193076;
+          x: mod(i, 4) * 74px;
+          y: floor(i / 4) * 74px;
+          width: 64px;
+          height: 64px;
+          icon: title.image;
+          open_curtain: title.image_visible || title.solved;
+          solved: title.solved;
+          clicked => {
+             if (!root.disable_tiles){
+              title.image_visible = !title.image-visible;
+              root.check_if_pair_solved();
+             }
+          }
         }
+      }
     }
   }
-
 }
